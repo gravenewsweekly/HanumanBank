@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile - Hanuman Bank</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Hanuman Bank</h1>
+            <p>User Profile</p>
+        </header>
+        
+        <div class="profile-container">
+            <div class="profile-error hidden">
+                <div class="message error">
+                    <h2>Profile Not Found</h2>
+                    <p>The requested user profile could not be found.</p>
+                    <p><a href="index.html">Return to homepage</a></p>
+                </div>
+            </div>
+
+            <div class="profile-content hidden">
+                <div class="profile-header">
+                    <div class="profile-avatar">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <div class="profile-info">
+                        <h2 id="profileUsername">Username</h2>
+                        <p class="profile-nickname" id="profileNickname"></p>
+                        <p class="member-since" id="memberSince"></p>
+                    </div>
+                </div>
+
+                <div class="profile-details">
+                    <div class="detail-section">
+                        <h3><i class="fas fa-user"></i> Basic Information</h3>
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <span class="detail-label">Real Name:</span>
+                                <span class="detail-value" id="realNameValue"></span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Age:</span>
+                                <span class="detail-value" id="ageValue"></span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">School/College:</span>
+                                <span class="detail-value" id="schoolValue"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3><i class="fas fa-info-circle"></i> About</h3>
+                        <div class="detail-item-full">
+                            <span class="detail-label">Bio:</span>
+                            <p class="detail-value" id="bioValue">No bio provided</p>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3><i class="fas fa-heart"></i> Reason for Joining</h3>
+                        <div class="detail-item-full">
+                            <p class="detail-value" id="reasonValue"></p>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3><i class="fas fa-chart-line"></i> Activity</h3>
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <span class="detail-label">Journal Entries:</span>
+                                <span class="detail-value" id="journalCount">0</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Hanuman Chants:</span>
+                                <span class="detail-value" id="chantCount">0</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Last Updated:</span>
+                                <span class="detail-value" id="lastUpdated"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-actions">
+                    <a href="index.html" class="btn btn-primary">Back to Home</a>
+                    <div id="editProfileBtnContainer" class="hidden">
+                        <a href="edit-profile.html" class="btn btn-secondary">Edit Profile</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API configuration
+        const API_KEY = '$2a$10$uxQT/K0GQROTIeDYxqITXuqLD3tJVCBKx1KumopS8c5yx6Dwy4adG';
+        const BIN_ID = '68b4193a43b1c97be931e99b';
+        const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
+        // DOM elements
+        const profileError = document.querySelector('.profile-error');
+        const profileContent = document.querySelector('.profile-content');
+        const editProfileBtnContainer = document.getElementById('editProfileBtnContainer');
+        
+        // Profile elements
+        const profileUsername = document.getElementById('profileUsername');
+        const profileNickname = document.getElementById('profileNickname');
+        const memberSince = document.getElementById('memberSince');
+        const realNameValue = document.getElementById('realNameValue');
+        const ageValue = document.getElementById('ageValue');
+        const schoolValue = document.getElementById('schoolValue');
+        const bioValue = document.getElementById('bioValue');
+        const reasonValue = document.getElementById('reasonValue');
+        const journalCount = document.getElementById('journalCount');
+        const chantCount = document.getElementById('chantCount');
+        const lastUpdated = document.getElementById('lastUpdated');
+
+        // Current user and profile data
+        let currentUser = null;
+        let profileUser = null;
+        let profileData = null;
+
+        // Initialize the page
+        async function initPage() {
+            // Get username from URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const username = urlParams.get('user');
+            
+            if (!username) {
+                // No username specified, check if we have a logged in user
+                const userData = localStorage.getItem('currentUser');
+                
+                if (userData) {
+                    // Redirect to current user's profile
+                    currentUser = JSON.parse(userData);
+                    window.location.href = `viewprofile.html?user=${currentUser.username}`;
+                    return;
+                } else {
+                    // No user specified and no logged in user
+                    showError('No user specified');
+                    return;
+                }
+            }
+            
+            // Load the specified user's profile
+            await loadUserProfile(username);
+            
+            // Check if current user is viewing their own profile
+            const userData = localStorage.getItem('currentUser');
+            if (userData) {
+                currentUser = JSON.parse(userData);
+                if (currentUser.username === username) {
+                    editProfileBtnContainer.classList.remove('hidden');
+                }
+            }
+        }
+
+        // Load user profile from database
+        async function loadUserProfile(username) {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'GET',
+                    headers: {
+                        'X-Master-Key': API_KEY,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch user data');
+                }
+                
+                const data = await response.json();
+                const users = data.record.users || [];
+                
+                // Find the requested user
+                const userData = users.find(user => user.username === username);
+                
+                if (!userData) {
+                    showError('User not found');
+                    return;
+                }
+                
+                profileUser = userData;
+                profileData = userData.profile || {};
+                
+                // Display the profile
+                displayProfile();
+                
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                showError('Error loading profile. Please try again later.');
+            }
+        }
+
+        // Display profile data
+        function displayProfile() {
+            // Set basic info
+            profileUsername.textContent = profileUser.username;
+            
+            if (profileData.nickname) {
+                profileNickname.textContent = `"${profileData.nickname}"`;
+                profileNickname.classList.remove('hidden');
+            }
+            
+            // Set member since date
+            if (profileUser.createdAt) {
+                const joinDate = new Date(profileUser.createdAt);
+                memberSince.textContent = `Member since ${joinDate.toLocaleDateString()}`;
+            }
+            
+            // Set profile details
+            realNameValue.textContent = profileData.realName || 'Not provided';
+            ageValue.textContent = profileData.age || 'Not provided';
+            schoolValue.textContent = profileData.school || 'Not provided';
+            
+            if (profileData.bio) {
+                bioValue.textContent = profileData.bio;
+            } else {
+                bioValue.textContent = 'No bio provided';
+                bioValue.classList.add('no-data');
+            }
+            
+            reasonValue.textContent = profileData.reason || 'Not provided';
+            
+            // Set activity data
+            if (profileUser.journalEntries) {
+                journalCount.textContent = profileUser.journalEntries.length;
+            }
+            
+            if (profileUser.chantingData) {
+                chantCount.textContent = profileUser.chantingData.count || 0;
+            }
+            
+            if (profileData.lastUpdated) {
+                const updatedDate = new Date(profileData.lastUpdated);
+                lastUpdated.textContent = updatedDate.toLocaleDateString();
+            }
+            
+            // Show the profile content
+            profileContent.classList.remove('hidden');
+        }
+
+        // Show error message
+        function showError(message) {
+            profileError.classList.remove('hidden');
+            const errorMessage = profileError.querySelector('p');
+            if (errorMessage && message) {
+                errorMessage.textContent = message;
+            }
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', initPage);
+
+        // Developer tools protection (basic)
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            // Disable F12, Ctrl+Shift+I, Ctrl+Shift+C, Ctrl+U
+            if (
+                e.key === 'F12' ||
+                (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+                (e.ctrlKey && e.shiftKey && e.key === 'C') ||
+                (e.ctrlKey && e.key === 'U')
+            ) {
+                e.preventDefault();
+            }
+        });
+    </script>
+    
+    <!-- Font Awesome for icons -->
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</body>
+</html>
