@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hanuman Bank - Secure Banking Solutions</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <a href="index.html"><i class="fas fa-landmark"></i> Hanuman Bank</a>
+            </div>
+            <div class="nav-search">
+                <input type="text" id="searchInput" placeholder="Search users...">
+                <button id="searchBtn"><i class="fas fa-search"></i></button>
+            </div>
+            <div class="nav-menu">
+                <a href="index.html" class="nav-link">Home</a>
+                <a href="about.html" class="nav-link">About Us</a>
+                <a href="contact.html" class="nav-link">Contact</a>
+                <a href="terms.html" class="nav-link">Terms</a>
+                <a href="privacy.html" class="nav-link">Privacy</a>
+                <div id="authLinks">
+                    <a href="register.html" class="nav-link" id="registerLink">Register</a>
+                    <a href="login.html" class="nav-link" id="loginLink">Login</a>
+                </div>
+                <div id="userMenu" class="hidden">
+                    <div class="user-dropdown">
+                        <button id="userDropdownBtn" class="user-btn"></button>
+                        <div id="userDropdown" class="dropdown-content hidden">
+                            <a href="viewprofile.html" id="viewProfileBtn"><i class="fas fa-user"></i> View Profile</a>
+                            <a href="edit-profile.html" id="editProfileBtn"><i class="fas fa-edit"></i> Edit Profile</a>
+                            <a href="login.html" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="hero-content">
+                <h1>Welcome to Hanuman Bank</h1>
+                <p id="welcomeMessage">Secure banking solutions for everyone</p>
+                <div class="hero-buttons">
+                    <a href="journal.html" class="btn btn-primary" id="journalBtn">Journal</a>
+                    <a href="bank.html" class="btn btn-secondary" id="hanumanBankBtn">Hanuman Bank</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- User Search Results -->
+        <section class="search-results hidden">
+            <div class="container">
+                <h2>Search Results</h2>
+                <div id="userResults"></div>
+            </div>
+        </section>
+
+        <!-- Dos and Don'ts Section -->
+        <section class="guidelines">
+            <div class="container">
+                <h2>Dos and Don'ts</h2>
+                <div class="guidelines-content">
+                    <div class="dos">
+                        <h3><i class="fas fa-check-circle"></i> Dos</h3>
+                        <ul>
+                            <li>Use a strong, unique password</li>
+                            <li>Keep your login credentials secure</li>
+                            <li>Log out after each session</li>
+                            <li>Report suspicious activity immediately</li>
+                            <li>Update your profile information regularly</li>
+                        </ul>
+                    </div>
+                    <div class="donts">
+                        <h3><i class="fas fa-times-circle"></i> Don'ts</h3>
+                        <ul>
+                            <li>Don't share your password with anyone</li>
+                            <li>Don't use public computers for banking</li>
+                            <li>Don't click on suspicious links in emails</li>
+                            <li>Don't use simple or easily guessable passwords</li>
+                            <li>Don't ignore security notifications</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Hanuman Bank</h3>
+                    <p>Secure banking solutions for the modern world.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="about.html">About Us</a></li>
+                        <li><a href="contact.html">Contact</a></li>
+                        <li><a href="terms.html">Terms of Service</a></li>
+                        <li><a href="privacy.html">Privacy Policy</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Connect With Us</h3>
+                    <div class="social-icons">
+                        <a href="#"><i class="fab fa-facebook"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-linkedin"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 Hanuman Bank. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // API configuration
+        const API_KEY = '$2a$10$uxQT/K0GQROTIeDYxqITXuqLD3tJVCBKx1KumopS8c5yx6Dwy4adG';
+        const BIN_ID = '68b4193a43b1c97be931e99b';
+        const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
+        // DOM elements
+        const authLinks = document.getElementById('authLinks');
+        const userMenu = document.getElementById('userMenu');
+        const userDropdownBtn = document.getElementById('userDropdownBtn');
+        const userDropdown = document.getElementById('userDropdown');
+        const welcomeMessage = document.getElementById('welcomeMessage');
+        const registerLink = document.getElementById('registerLink');
+        const loginLink = document.getElementById('loginLink');
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const searchResults = document.querySelector('.search-results');
+        const userResults = document.getElementById('userResults');
+        const viewProfileBtn = document.getElementById('viewProfileBtn');
+        const editProfileBtn = document.getElementById('editProfileBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const journalBtn = document.getElementById('journalBtn');
+        const hanumanBankBtn = document.getElementById('hanumanBankBtn');
+
+        // Check if user is logged in
+        function checkLoginStatus() {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            
+            if (currentUser) {
+                // User is logged in
+                authLinks.classList.add('hidden');
+                userMenu.classList.remove('hidden');
+                userDropdownBtn.textContent = currentUser.username;
+                
+                // Update welcome message
+                welcomeMessage.innerHTML = `Welcome back, <span class="highlight">${currentUser.username}</span>!`;
+            } else {
+                // User is not logged in
+                authLinks.classList.remove('hidden');
+                userMenu.classList.add('hidden');
+                welcomeMessage.textContent = 'Happy chant bank for everyone';
+            }
+        }
+
+        // Logout function
+        function logout() {
+            localStorage.removeItem('currentUser');
+            checkLoginStatus();
+            window.location.href = 'index.html';
+        }
+
+        // Search users
+        async function searchUsers(query) {
+            if (query.length < 3) {
+                alert('Please enter at least 3 characters to search');
+                return;
+            }
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'GET',
+                    headers: {
+                        'X-Master-Key': API_KEY,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch user data');
+                }
+                
+                const data = await response.json();
+                const users = data.record.users || [];
+                
+                // Filter users based on query
+                const filteredUsers = users.filter(user => 
+                    user.username.toLowerCase().includes(query.toLowerCase())
+                );
+                
+                // Display results
+                displaySearchResults(filteredUsers);
+            } catch (error) {
+                console.error('Error searching users:', error);
+                userResults.innerHTML = '<p class="error">Error searching users. Please try again later.</p>';
+            }
+        }
+
+        // Display search results
+        function displaySearchResults(users) {
+            if (users.length === 0) {
+                userResults.innerHTML = '<p class="no-results">No users found matching your search.</p>';
+                searchResults.classList.remove('hidden');
+                return;
+            }
+            
+            userResults.innerHTML = '';
+            users.forEach(user => {
+                const userCard = document.createElement('div');
+                userCard.className = 'user-card';
+                userCard.innerHTML = `
+                    <h3>${user.username}</h3>
+                    <p>Member since: ${new Date(user.createdAt).toLocaleDateString()}</p>
+                    <button class="view-profile-btn" data-username="${user.username}">View Profile</button>
+                `;
+                userResults.appendChild(userCard);
+            });
+            
+            searchResults.classList.remove('hidden');
+            
+            // Add event listeners to view profile buttons
+            document.querySelectorAll('.view-profile-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const username = e.target.getAttribute('data-username');
+                    viewUserProfile(username);
+                });
+            });
+        }
+
+        // View user profile
+        function viewUserProfile(username) {
+            // In a real application, this would redirect to the user's profile page
+            // For this demo, we'll show a modal with user info
+            alert(`Redirecting to ${username}'s profile page. In a real application, this would show the user's public profile.`);
+            
+            // Store the viewed profile in localStorage to simulate navigation
+            localStorage.setItem('viewedProfile', username);
+            window.location.href = 'viewprofile.html';
+        }
+
+        // Redirect to profile page
+        function redirectToProfile() {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (currentUser) {
+                localStorage.setItem('viewedProfile', currentUser.username);
+                window.location.href = 'viewprofile.html';
+            } else {
+                alert('Please log in to view your profile');
+            }
+        }
+
+        // Redirect to edit profile page
+        function redirectToEditProfile() {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (currentUser) {
+                window.location.href = 'edit-profile.html';
+            } else {
+                alert('Please log in to edit your profile');
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            checkLoginStatus();
+            
+            // User dropdown toggle
+            userDropdownBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userDropdown.classList.toggle('hidden');
+            });
+            
+            // Close dropdown when clicking elsewhere
+            document.addEventListener('click', () => {
+                userDropdown.classList.add('hidden');
+            });
+            
+            // Search functionality
+            searchBtn.addEventListener('click', () => {
+                searchUsers(searchInput.value.trim());
+            });
+            
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    searchUsers(searchInput.value.trim());
+                }
+            });
+            
+            // User menu actions
+            viewProfileBtn.addEventListener('click', redirectToProfile);
+            editProfileBtn.addEventListener('click', redirectToEditProfile);
+            logoutBtn.addEventListener('click', logout);
+            
+            // Feature buttons
+            journalBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                alert('Journal feature would open here. In a real application, this would be a financial journal tool.');
+            });
+            
+            hanumanBankBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                alert('Hanuman Bank feature would open here. In a real application, this would be the main banking dashboard.');
+            });
+        });
+
+        // Developer tools protection (basic)
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            // Disable F12, Ctrl+Shift+I, Ctrl+Shift+C, Ctrl+U
+            if (
+                e.key === 'F12' ||
+                (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+                (e.ctrlKey && e.shiftKey && e.key === 'C') ||
+                (e.ctrlKey && e.key === 'U')
+            ) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>
