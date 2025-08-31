@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hanuman Chanting - Hanuman Bank</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Hanuman Bank</h1>
+            <p>Chanting Portal</p>
+        </header>
+        
+        <div class="auth-check hidden">
+            <div class="message error">
+                <h2>Access Restricted</h2>
+                <p>Only registered users can access this page.</p>
+                <p>Please <a href="register.html">register</a> or <a href="login.html">login</a> to continue.</p>
+            </div>
+        </div>
+
+        <div class="chanting-interface hidden">
+            <div class="user-welcome">
+                <h2>Welcome, <span id="usernameDisplay"></span>!</h2>
+                <p>Chant "Shree Hanuman" 20 times to receive blessings</p>
+            </div>
+
+            <div class="lockout-message hidden">
+                <div class="message success">
+                    <h2>Blessings Received!</h2>
+                    <p>You have completed your chanting for today. Please return in <span id="countdownTimer">24:00:00</span>.</p>
+                </div>
+            </div>
+
+            <div class="chanting-box">
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text">Chanting: <span id="chantCount">0</span>/20</div>
+                </div>
+
+                <div class="chant-input-container">
+                    <input type="text" id="chantInput" placeholder="Type 'Shree Hanuman' here" disabled>
+                    <button id="chantBtn" disabled>Chant</button>
+                </div>
+
+                <div class="instructions">
+                    <h3>Instructions:</h3>
+                    <ol>
+                        <li>Type "Shree Hanuman" in the input field</li>
+                        <li>Click the Chant button or press Enter</li>
+                        <li>Complete 20 chants to receive blessings</li>
+                        <li>After completion, you must wait 24 hours to chant again</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="completion-message hidden">
+                <div class="message success">
+                    <h2>Jai Shree Hanuman!</h2>
+                    <p>You have successfully completed 20 chants. May Lord Hanuman bless you with strength, wisdom, and prosperity.</p>
+                    <div class="blessing-image">🕉️</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API configuration
+        const API_KEY = '$2a$10$uxQT/K0GQROTIeDYxqITXuqLD3tJVCBKx1KumopS8c5yx6Dwy4adG';
+        const BIN_ID = '68b4193a43b1c97be931e99b';
+        const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
+        // DOM elements
+        const authCheck = document.querySelector('.auth-check');
+        const chantingInterface = document.querySelector('.chanting-interface');
+        const usernameDisplay = document.getElementById('usernameDisplay');
+        const lockoutMessage = document.querySelector('.lockout-message');
+        const countdownTimer = document.getElementById('countdownTimer');
+        const progressFill = document.getElementById('progressFill');
+        const chantCount = document.getElementById('chantCount');
+        const chantInput = document.getElementById('chantInput');
+        const chantBtn = document.getElementById('chantBtn');
+        const completionMessage = document.querySelector('.completion-message');
+
+        // Current user and chanting data
+        let currentUser = null;
+        let userChantingData = null;
+
+        // Check authentication and initialize page
+        async function initPage() {
+            // Check if user is logged in (from localStorage)
+            const userData = localStorage.getItem('currentUser');
+            
+            if (!userData) {
+                // User is not logged in
+                authCheck.classList.remove('hidden');
+                return;
+            }
+            
+            currentUser = JSON.parse(userData);
+            chantingInterface.classList.remove('hidden');
+            usernameDisplay.textContent = currentUser.username;
+            
+            // Load user's chanting data
+            await loadUserChantingData();
+            
+            // Check if user has completed chanting today
+            if (userChantingData && userChantingData.lastCompleted) {
+                const lastCompleted = new Date(userChantingData.lastCompleted);
+                const now = new Date();
+                const hoursDiff = (now - lastCompleted) / (1000 * 60 * 60);
+                
+                if (hoursDiff < 24) {
+                    // User completed chanting within last 24 hours
+                    showLockoutTimer(24 - Math.floor(hoursDiff));
+                    return;
+                }
+            }
+            
+            // User can chant
+            enableChanting();
+        }
+
+        // Load user's chanting data from database
+        async function loadUserChantingData() {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'GET',
+                    headers: {
+                        'X-Master-Key': API_KEY,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch user data');
+                }
+                
+                const data = await response.json();
+                const users = data.record.users || [];
+                
+                // Find current user's data
+                const userData = users.find(user => user.username === currentUser.username);
+                
+                if (userData && userData.chantingData) {
+                    userChantingData = userData.chantingData;
+                    chantCount.textContent = userChantingData.count || 0;
+                    updateProgressBar(userChantingData.count || 0);
+                } else {
+                    userChantingData = { count: 0 };
+                }
+            } catch (error) {
+                console.error('Error loading user data:', error);
+                userChantingData = { count: 0 };
+            }
+        }
+
+        // Enable chanting interface
+        function enableChanting() {
+            chantInput.disabled = false;
+            chantBtn.disabled = false;
+            
+            // Set up event listeners
+            chantInput.addEventListener('keyup', (e) => {
+                if (e.key === 'Enter') {
+                    handleChant();
+                }
+            });
+            
+            chantBtn.addEventListener('click', handleChant);
+            
+            // Focus on input
+            chantInput.focus();
+        }
+
+        // Handle chant submission
+        async function handleChant() {
+            const chantText = chantInput.value.trim();
+            
+            // Validate chant
+            if (chantText.toLowerCase() !== 'shree hanuman') {
+                alert('Please type "Shree Hanuman" exactly to chant');
+                return;
+            }
+            
+            // Update chant count
+            userChantingData.count = (userChantingData.count || 0) + 1;
+            chantCount.textContent = userChantingData.count;
+            updateProgressBar(userChantingData.count);
+            
+            // Clear input
+            chantInput.value = '';
+            
+            // Check if completed
+            if (userChantingData.count >= 20) {
+                await completeChanting();
+            } else {
+                // Save progress
+                await saveChantingData();
+            }
+        }
+
+        // Update progress bar
+        function updateProgressBar(count) {
+            const percentage = (count / 20) * 100;
+            progressFill.style.width = `${percentage}%`;
+        }
+
+        // Complete chanting
+        async function completeChanting() {
+            userChantingData.lastCompleted = new Date().toISOString();
+            userChantingData.count = 20;
+            
+            // Save to database
+            await saveChantingData();
+            
+            // Show completion message
+            completionMessage.classList.remove('hidden');
+            chantingInterface.querySelector('.chant-input-container').classList.add('hidden');
+            
+            // Start lockout timer
+            showLockoutTimer(24);
+        }
+
+        // Show lockout timer
+        function showLockoutTimer(hours) {
+            lockoutMessage.classList.remove('hidden');
+            chantingInterface.querySelector('.chant-input-container').classList.add('hidden');
+            
+            // Calculate end time
+            const endTime = new Date();
+            endTime.setHours(endTime.getHours() + hours);
+            
+            // Update timer every second
+            const timerInterval = setInterval(() => {
+                const now = new Date();
+                const timeLeft = endTime - now;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    lockoutMessage.classList.add('hidden');
+                    enableChanting();
+                    userChantingData.count = 0;
+                    saveChantingData();
+                    return;
+                }
+                
+                // Format time
+                const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
+                const minutesLeft = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                const secondsLeft = Math.floor((timeLeft % (1000 * 60)) / 1000);
+                
+                countdownTimer.textContent = `${String(hoursLeft).padStart(2, '0')}:${String(minutesLeft).padStart(2, '0')}:${String(secondsLeft).padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        // Save chanting data to database
+        async function saveChantingData() {
+            try {
+                // First get existing users
+                const response = await fetch(API_URL, {
+                    method: 'GET',
+                    headers: {
+                        'X-Master-Key': API_KEY,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch user data');
+                }
+                
+                const data = await response.json();
+                const users = data.record.users || [];
+                
+                // Find current user and update their chanting data
+                const userIndex = users.findIndex(user => user.username === currentUser.username);
+                
+                if (userIndex !== -1) {
+                    users[userIndex].chantingData = userChantingData;
+                } else {
+                    // This shouldn't happen if user is logged in, but just in case
+                    users.push({
+                        username: currentUser.username,
+                        email: currentUser.email,
+                        chantingData: userChantingData
+                    });
+                }
+                
+                // Update the database
+                const updateResponse = await fetch(API_URL, {
+                    method: 'PUT',
+                    headers: {
+                        'X-Master-Key': API_KEY,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ users })
+                });
+                
+                if (!updateResponse.ok) {
+                    throw new Error('Failed to save user data');
+                }
+            } catch (error) {
+                console.error('Error saving chanting data:', error);
+                alert('Error saving your progress. Please try again.');
+            }
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', initPage);
+
+        // Developer tools protection (basic)
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            // Disable F12, Ctrl+Shift+I, Ctrl+Shift+C, Ctrl+U
+            if (
+                e.key === 'F12' ||
+                (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+                (e.ctrlKey && e.shiftKey && e.key === 'C') ||
+                (e.ctrlKey && e.key === 'U')
+            ) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>
