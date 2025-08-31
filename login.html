@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Hanuman Bank</title>
+    <link rel="stylesheet" href="login-style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Hanuman Bank</h1>
+            <p>Secure Login Portal</p>
+        </header>
+        
+        <div class="login-form">
+            <h2>Login to Your Account</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">Username*</label>
+                    <input type="text" id="username" name="username" required>
+                    <div id="usernameError" class="error-message"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password*</label>
+                    <input type="password" id="password" name="password" required>
+                    <div id="passwordError" class="error-message"></div>
+                </div>
+                
+                <button type="submit" id="loginBtn">Login</button>
+            </form>
+            
+            <div class="login-links">
+                <p>Don't have an account? <a href="register.html">Register here</a></p>
+                <p><a href="index.html">Back to Homepage</a></p>
+            </div>
+            
+            <div id="successMessage" class="success-message hidden">
+                <p>Login successful! Redirecting to homepage...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API configuration
+        const API_KEY = '$2a$10$uxQT/K0GQROTIeDYxqITXuqLD3tJVCBKx1KumopS8c5yx6Dwy4adG';
+        const BIN_ID = '68b4193a43b1c97be931e99b';
+        const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
+        // DOM elements
+        const loginForm = document.getElementById('loginForm');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const usernameError = document.getElementById('usernameError');
+        const passwordError = document.getElementById('passwordError');
+        const successMessage = document.getElementById('successMessage');
+        const loginBtn = document.getElementById('loginBtn');
+
+        // Check if user is already logged in
+        function checkLoginStatus() {
+            const currentUser = localStorage.getItem('currentUser');
+            if (currentUser) {
+                // User is already logged in, redirect to homepage
+                window.location.href = 'index.html';
+            }
+        }
+
+        // Form submission handler
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Get form values
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+            
+            // Reset error messages
+            usernameError.textContent = '';
+            passwordError.textContent = '';
+            
+            // Validate inputs
+            if (!username) {
+                usernameError.textContent = 'Username is required';
+                return;
+            }
+            
+            if (!password) {
+                passwordError.textContent = 'Password is required';
+                return;
+            }
+            
+            // Attempt login
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Logging in...';
+            
+            const loginSuccess = await attemptLogin(username, password);
+            
+            if (loginSuccess) {
+                // Show success message
+                successMessage.classList.remove('hidden');
+                loginForm.classList.add('hidden');
+                
+                // Store user in localStorage
+                localStorage.setItem('currentUser', JSON.stringify({
+                    username: username,
+                    loginTime: new Date().toISOString()
+                }));
+                
+                // Redirect to homepage after 2 seconds
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 2000);
+            } else {
+                passwordError.textContent = 'Invalid username or password';
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Login';
+            }
+        });
+
+        // Attempt login with database
+        async function attemptLogin(username, password) {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'GET',
+                    headers: {
+                        'X-Master-Key': API_KEY,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch user data');
+                }
+                
+                const data = await response.json();
+                const users = data.record.users || [];
+                
+                // Find user with matching username and password
+                const user = users.find(u => u.username === username && u.password === password);
+                
+                return !!user; // Return true if user found, false otherwise
+            } catch (error) {
+                console.error('Error during login:', error);
+                return false;
+            }
+        }
+
+        // Check login status on page load
+        document.addEventListener('DOMContentLoaded', checkLoginStatus);
+
+        // Developer tools protection (basic)
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            // Disable F12, Ctrl+Shift+I, Ctrl+Shift+C, Ctrl+U
+            if (
+                e.key === 'F12' ||
+                (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+                (e.ctrlKey && e.shiftKey && e.key === 'C') ||
+                (e.ctrlKey && e.key === 'U')
+            ) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>
