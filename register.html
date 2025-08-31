@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Hanuman Bank</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Hanuman Bank</h1>
+            <p>Secure Banking Solutions</p>
+        </header>
+        
+        <div class="registration-form">
+            <h2>Create Account</h2>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="username">Username*</label>
+                    <input type="text" id="username" name="username" required>
+                    <div id="usernameError" class="error-message"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email*</label>
+                    <input type="email" id="email" name="email" required>
+                    <div id="emailError" class="error-message"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password*</label>
+                    <input type="password" id="password" name="password" required>
+                    <div id="passwordError" class="error-message"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirmPassword">Re-enter Password*</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required>
+                    <div id="confirmPasswordError" class="error-message"></div>
+                </div>
+                
+                <button type="submit" id="submitBtn">Create Account</button>
+            </form>
+            
+            <div id="successMessage" class="success-message hidden">
+                <p>Registration successful! Redirecting to homepage...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API configuration
+        const API_KEY = '$2a$10$uxQT/K0GQROTIeDYxqITXuqLD3tJVCBKx1KumopS8c5yx6Dwy4adG';
+        const BIN_ID = '68b4193a43b1c97be931e99b';
+        const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
+        // DOM elements
+        const registerForm = document.getElementById('registerForm');
+        const usernameInput = document.getElementById('username');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+        const usernameError = document.getElementById('usernameError');
+        const emailError = document.getElementById('emailError');
+        const passwordError = document.getElementById('passwordError');
+        const confirmPasswordError = document.getElementById('confirmPasswordError');
+        const successMessage = document.getElementById('successMessage');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // Username validation
+        function validateUsername(username) {
+            // Check if empty
+            if (!username) {
+                return "Username is required";
+            }
+            
+            // Check length
+            if (username.length < 3 || username.length > 20) {
+                return "Username must be between 3 and 20 characters";
+            }
+            
+            // Check for valid characters (letters only)
+            const validChars = /^[a-zA-Z]+$/;
+            if (!validChars.test(username)) {
+                return "Username can only contain letters (no numbers, symbols, or spaces)";
+            }
+            
+            // Check for vulgar words (basic example)
+            const vulgarWords = ['admin', 'root', 'administrator', 'moderator', 'test', 'hanuman'];
+            if (vulgarWords.includes(username.toLowerCase())) {
+                return "This username is not allowed";
+            }
+            
+            return ""; // No error
+        }
+
+        // Email validation
+        function validateEmail(email) {
+            if (!email) {
+                return "Email is required";
+            }
+            
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                return "Please enter a valid email address";
+            }
+            
+            return ""; // No error
+        }
+
+        // Password validation
+        function validatePassword(password) {
+            if (!password) {
+                return "Password is required";
+            }
+            
+            if (password.length < 8) {
+                return "Password must be at least 8 characters long";
+            }
+            
+            // Check for at least one uppercase, one lowercase, one number
+            const hasUpperCase = /[A-Z]/.test(password);
+            const hasLowerCase = /[a-z]/.test(password);
+            const hasNumber = /[0-9]/.test(password);
+            
+            if (!hasUpperCase || !hasLowerCase || !hasNumber) {
+                return "Password must contain at least one uppercase letter, one lowercase letter, and one number";
+            }
+            
+            return ""; // No error
+        }
+
+        // Confirm password validation
+        function validateConfirmPassword(password, confirmPassword) {
+            if (!confirmPassword) {
+                return "Please confirm your password";
+            }
+            
+            if (password !== confirmPassword) {
+                return "Passwords do not match";
+            }
+            
+            return ""; // No error
+        }
+
+        // Check if username already exists
+        async function checkUsernameExists(username) {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'GET',
+                    headers: {
+                        'X-Master-Key': API_KEY,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch user data');
+                }
+                
+                const data = await response.json();
+                const users = data.record.users || [];
+                
+                return users.some(user => user.username === username);
+            } catch (error) {
+                console.error('Error checking username:', error);
+                return false; // Assume username doesn't exist if there's an error
+            }
+        }
+
+        // Save user to database
+        async function saveUser(userData) {
+            try {
+                // First get existing users
+                const response = await fetch(API_URL, {
+                    method: 'GET',
+                    headers: {
+                        'X-Master-Key': API_KEY,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch user data');
+                }
+                
+                const data = await response.json();
+                const users = data.record.users || [];
+                
+                // Add new user
+                users.push(userData);
+                
+                // Update the database
+                const updateResponse = await fetch(API_URL, {
+                    method: 'PUT',
+                    headers: {
+                        'X-Master-Key': API_KEY,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ users })
+                });
+                
+                if (!updateResponse.ok) {
+                    throw new Error('Failed to save user data');
+                }
+                
+                return true;
+            } catch (error) {
+                console.error('Error saving user:', error);
+                return false;
+            }
+        }
+
+        // Form submission handler
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Get form values
+            const username = usernameInput.value.trim();
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+            const confirmPassword = confirmPasswordInput.value;
+            
+            // Reset error messages
+            usernameError.textContent = '';
+            emailError.textContent = '';
+            passwordError.textContent = '';
+            confirmPasswordError.textContent = '';
+            
+            // Validate inputs
+            const usernameValidation = validateUsername(username);
+            const emailValidation = validateEmail(email);
+            const passwordValidation = validatePassword(password);
+            const confirmPasswordValidation = validateConfirmPassword(password, confirmPassword);
+            
+            if (usernameValidation) {
+                usernameError.textContent = usernameValidation;
+                return;
+            }
+            
+            if (emailValidation) {
+                emailError.textContent = emailValidation;
+                return;
+            }
+            
+            if (passwordValidation) {
+                passwordError.textContent = passwordValidation;
+                return;
+            }
+            
+            if (confirmPasswordValidation) {
+                confirmPasswordError.textContent = confirmPasswordValidation;
+                return;
+            }
+            
+            // Check if username already exists
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Checking username...';
+            
+            const usernameExists = await checkUsernameExists(username);
+            
+            if (usernameExists) {
+                usernameError.textContent = 'Username already taken';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Account';
+                return;
+            }
+            
+            // Save user data
+            submitBtn.textContent = 'Creating account...';
+            
+            const userData = {
+                username,
+                email,
+                password, // In a real application, this should be hashed
+                createdAt: new Date().toISOString()
+            };
+            
+            const saveSuccess = await saveUser(userData);
+            
+            if (saveSuccess) {
+                // Show success message
+                successMessage.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+                
+                // Redirect to homepage after 2 seconds
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 2000);
+            } else {
+                alert('Registration failed. Please try again later.');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Account';
+            }
+        });
+
+        // Developer tools protection (basic)
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            // Disable F12, Ctrl+Shift+I, Ctrl+Shift+C, Ctrl+U
+            if (
+                e.key === 'F12' ||
+                (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+                (e.ctrlKey && e.shiftKey && e.key === 'C') ||
+                (e.ctrlKey && e.key === 'U')
+            ) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>
