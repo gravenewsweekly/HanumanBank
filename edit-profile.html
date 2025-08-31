@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Profile - Hanuman Bank</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Hanuman Bank</h1>
+            <p>Edit Your Profile</p>
+        </header>
+        
+        <div class="auth-check hidden">
+            <div class="message error">
+                <h2>Access Restricted</h2>
+                <p>Only registered users can access this page.</p>
+                <p>Please <a href="register.html">register</a> or <a href="login.html">login</a> to continue.</p>
+            </div>
+        </div>
+
+        <div class="edit-profile-interface hidden">
+            <div class="user-welcome">
+                <h2>Edit Your Profile, <span id="usernameDisplay"></span>!</h2>
+                <p>Update your information below. Fields marked with * are mandatory.</p>
+            </div>
+
+            <form id="editProfileForm" class="profile-form">
+                <div class="form-section">
+                    <h3>Basic Information</h3>
+                    
+                    <div class="form-group">
+                        <label for="nickname">Nickname *</label>
+                        <input type="text" id="nickname" name="nickname" required>
+                        <div class="error-message" id="nicknameError"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="realName">Real Name *</label>
+                        <input type="text" id="realName" name="realName" required>
+                        <div class="error-message" id="realNameError"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="age">Age *</label>
+                        <input type="number" id="age" name="age" min="13" max="120" required>
+                        <div class="error-message" id="ageError"></div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Education</h3>
+                    
+                    <div class="form-group">
+                        <label for="school">School/College Name *</label>
+                        <input type="text" id="school" name="school" required>
+                        <div class="error-message" id="schoolError"></div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Additional Information</h3>
+                    
+                    <div class="form-group">
+                        <label for="bio">Bio (Optional)</label>
+                        <textarea id="bio" name="bio" rows="4" placeholder="Tell us about yourself..."></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="reason">Reason for Joining Hanuman Bank *</label>
+                        <textarea id="reason" name="reason" rows="4" required placeholder="Why did you join our website?"></textarea>
+                        <div class="error-message" id="reasonError"></div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" id="saveBtn">Save Profile</button>
+                    <a href="viewprofile.html" class="cancel-btn">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // API configuration
+        const API_KEY = '$2a$10$uxQT/K0GQROTIeDYxqITXuqLD3tJVCBKx1KumopS8c5yx6Dwy4adG';
+        const BIN_ID = '68b4193a43b1c97be931e99b';
+        const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
+        // DOM elements
+        const authCheck = document.querySelector('.auth-check');
+        const editProfileInterface = document.querySelector('.edit-profile-interface');
+        const usernameDisplay = document.getElementById('usernameDisplay');
+        const editProfileForm = document.getElementById('editProfileForm');
+        const saveBtn = document.getElementById('saveBtn');
+        
+        // Form fields
+        const nicknameInput = document.getElementById('nickname');
+        const realNameInput = document.getElementById('realName');
+        const ageInput = document.getElementById('age');
+        const schoolInput = document.getElementById('school');
+        const bioInput = document.getElementById('bio');
+        const reasonInput = document.getElementById('reason');
+        
+        // Error elements
+        const nicknameError = document.getElementById('nicknameError');
+        const realNameError = document.getElementById('realNameError');
+        const ageError = document.getElementById('ageError');
+        const schoolError = document.getElementById('schoolError');
+        const reasonError = document.getElementById('reasonError');
+
+        // Current user and profile data
+        let currentUser = null;
+        let userProfileData = null;
+
+        // Check authentication and initialize page
+        async function initPage() {
+            // Check if user is logged in (from localStorage)
+            const userData = localStorage.getItem('currentUser');
+            
+            if (!userData) {
+                // User is not logged in
+                authCheck.classList.remove('hidden');
+                return;
+            }
+            
+            currentUser = JSON.parse(userData);
+            editProfileInterface.classList.remove('hidden');
+            usernameDisplay.textContent = currentUser.username;
+            
+            // Load user's profile data
+            await loadUserProfileData();
+            
+            // Pre-fill form with existing data
+            prefillForm();
+            
+            // Set up event listeners
+            setupEventListeners();
+        }
+
+        // Load user's profile data from database
+        async function loadUserProfileData() {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'GET',
+                    headers: {
+                        'X-Master-Key': API_KEY,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch user data');
+                }
+                
+                const data = await response.json();
+                const users = data.record.users || [];
+                
+                // Find current user's data
+                const userData = users.find(user => user.username === currentUser.username);
+                
+                if (userData && userData.profile) {
+                    userProfileData = userData.profile;
+                } else {
+                    userProfileData = {};
+                }
+            } catch (error) {
+                console.error('Error loading profile data:', error);
+                userProfileData = {};
+            }
+        }
+
+        // Pre-fill form with existing data
+        function prefillForm() {
+            if (userProfileData.nickname) nicknameInput.value = userProfileData.nickname;
+            if (userProfileData.realName) realNameInput.value = userProfileData.realName;
+            if (userProfileData.age) ageInput.value = userProfileData.age;
+            if (userProfileData.school) schoolInput.value = userProfileData.school;
+            if (userProfileData.bio) bioInput.value = userProfileData.bio;
+            if (userProfileData.reason) reasonInput.value = userProfileData.reason;
+        }
+
+        // Set up event listeners
+        function setupEventListeners() {
+            editProfileForm.addEventListener('submit', handleFormSubmit);
+        }
+
+        // Handle form submission
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            // Validate form
+            if (!validateForm()) {
+                return;
+            }
+            
+            // Get form values
+            const formData = {
+                nickname: nicknameInput.value.trim(),
+                realName: realNameInput.value.trim(),
+                age: parseInt(ageInput.value),
+                school: schoolInput.value.trim(),
+                bio: bioInput.value.trim(),
+                reason: reasonInput.value.trim(),
+                lastUpdated: new Date().toISOString()
+            };
+            
+            // Update profile data
+            userProfileData = formData;
+            
+            // Save to database
+            const success = await saveProfileData();
+            
+            if (success) {
+                // Redirect to profile page
+                window.location.href = 'viewprofile.html';
+            } else {
+                alert('Error saving profile. Please try again.');
+            }
+        }
+
+        // Validate form
+        function validateForm() {
+            let isValid = true;
+            
+            // Reset error messages
+            nicknameError.textContent = '';
+            realNameError.textContent = '';
+            ageError.textContent = '';
+            schoolError.textContent = '';
+            reasonError.textContent = '';
+            
+            // Validate nickname
+            const nickname = nicknameInput.value.trim();
+            if (!nickname) {
+                nicknameError.textContent = 'Nickname is required';
+                isValid = false;
+            } else if (nickname.length < 2) {
+                nicknameError.textContent = 'Nickname must be at least 2 characters long';
+                isValid = false;
+            }
+            
+            // Validate real name
+            const realName = realNameInput.value.trim();
+            if (!realName) {
+                realNameError.textContent = 'Real name is required';
+                isValid = false;
+            } else if (realName.length < 2) {
+                realNameError.textContent = 'Please enter your full name';
+                isValid = false;
+            }
+            
+            // Validate age
+            const age = parseInt(ageInput.value);
+            if (!age) {
+                ageError.textContent = 'Age is required';
+                isValid = false;
+            } else if (age < 13) {
+                ageError.textContent = 'You must be at least 13 years old';
+                isValid = false;
+            } else if (age > 120) {
+                ageError.textContent = 'Please enter a valid age';
+                isValid = false;
+            }
+            
+            // Validate school
+            const school = schoolInput.value.trim();
+            if (!school) {
+                schoolError.textContent = 'School/College name is required';
+                isValid = false;
+            }
+            
+            // Validate reason
+            const reason = reasonInput.value.trim();
+            if (!reason) {
+                reasonError.textContent = 'Reason for joining is required';
+                isValid = false;
+            } else if (reason.length < 10) {
+                reasonError.textContent = 'Please provide a more detailed reason';
+                isValid = false;
+            }
+            
+            return isValid;
+        }
+
+        // Save profile data to database
+        async function saveProfileData() {
+            try {
+                // First get existing users
+                const response = await fetch(API_URL, {
+                    method: 'GET',
+                    headers: {
+                        'X-Master-Key': API_KEY,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch user data');
+                }
+                
+                const data = await response.json();
+                const users = data.record.users || [];
+                
+                // Find current user and update their profile data
+                const userIndex = users.findIndex(user => user.username === currentUser.username);
+                
+                if (userIndex !== -1) {
+                    if (!users[userIndex].profile) {
+                        users[userIndex].profile = {};
+                    }
+                    users[userIndex].profile = userProfileData;
+                } else {
+                    // This shouldn't happen if user is logged in, but just in case
+                    users.push({
+                        username: currentUser.username,
+                        email: currentUser.email,
+                        profile: userProfileData
+                    });
+                }
+                
+                // Update the database
+                const updateResponse = await fetch(API_URL, {
+                    method: 'PUT',
+                    headers: {
+                        'X-Master-Key': API_KEY,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ users })
+                });
+                
+                if (!updateResponse.ok) {
+                    throw new Error('Failed to save profile data');
+                }
+                
+                return true;
+            } catch (error) {
+                console.error('Error saving profile data:', error);
+                return false;
+            }
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', initPage);
+
+        // Developer tools protection (basic)
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            // Disable F12, Ctrl+Shift+I, Ctrl+Shift+C, Ctrl+U
+            if (
+                e.key === 'F12' ||
+                (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+                (e.ctrlKey && e.shiftKey && e.key === 'C') ||
+                (e.ctrlKey && e.key === 'U')
+            ) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>
